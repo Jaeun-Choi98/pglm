@@ -2,8 +2,6 @@
 
 ## 개요
 
----
-
 `pglm`은 PostgreSQL의 `NOTIFY/LISTEN` 기능을 비동기적으로 처리할 수 있도록 설계된 Go 패키지입니다.
 
 `pgx` 기반으로 개발되었으며, [pgln](https://github.com/xxx/pgln)의 구현 방식을 참고하여 커스텀 마이징했습니다.
@@ -11,8 +9,6 @@
 인터벌 방식이나 flag 방식 대신 **Go 채널 기반 방식**을 사용하여 보다 효율적으로 프로세스 간 통신을 처리할 수 있도록 설계되었습니다.
 
 ## 개발 배경
-
----
 
 [`autodata-manager`](https://github.com/Jaeun-Choi98/autodata-manager) 프로젝트를 진행하면서 PostgreSQL의 `NOTIFY/LISTEN` 기능을 간단히 구현하여 사용했으나,
 
@@ -25,22 +21,18 @@
 
 ## 설치
 
----
-
 ```
 go get github.com/Jaeun-Choi98/pglm
 ```
 
 ## 사용법
 
----
-
 ### `pglm` 객체 생성
 
 `ListenerManagerBuilder.Build()`를 통해 `ListenManager` 객체를 생성할 수 있습니다.
 
 ```go
-`lm, err := pglm.NewListenManagerBuilder().
+lm, err := pglm.NewListenManagerBuilder().
     SetConn("your_db_connection_info").  // DB 연결 정보 설정
     SetContext(context.Background()).    // 컨텍스트 설정
     SetReconnectInterval(1 * time.Second). // DB 재연결 간격 설정
@@ -49,7 +41,6 @@ go get github.com/Jaeun-Choi98/pglm
 if err != nil {
     log.Fatalf("Failed to create ListenManager: %v", err)
 }
-
 ```
 
 ### 주요 메서드
@@ -70,8 +61,6 @@ if err != nil {
 - 따라서, 개발자의 용도에 맞게 **비동기 처리 또는 Goroutine을 활용한 설계**가 필요합니다.
 
 ## 사용 예제
-
----
 
 ```go
 package main
@@ -168,8 +157,6 @@ func main() {
 ```
 
 ## 테스트
-
----
 
 ### 부하 테스트
 
