@@ -3,6 +3,7 @@ package pglm_test
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"testing"
@@ -182,4 +183,89 @@ func TestStressListenerManager(t *testing.T) {
 	err = lm.Shutdown()
 	require.NoError(t, err)
 	t.Log("Shutdown successfully")
+}
+
+func TestReadMe(t *testing.T) {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	connInfo := os.Getenv("DB_CONN_INFO_TEST")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// ListenManager 생성
+	lm, err := pglm.NewListenManagerBuilder().
+		SetConn(connInfo).
+		SetContext(ctx).
+		SetReconnectInterval(1 * time.Second).
+		SetBlockCheckTimeout(5 * time.Second).
+		Build()
+	require.NoError(nil, err)
+
+	// 리스너 시작
+	err = lm.StartListening()
+	if err != nil {
+		log.Fatalf("Failed to start listening: %v", err)
+	}
+	fmt.Println("Listening started...")
+
+	var wg sync.WaitGroup
+	check := make(chan bool)
+	wg.Add(1)
+	expClient := func() error {
+		defer wg.Done()
+		channelName := "example_channel"
+		// 핸들러 등록
+		handler := pglm.ListenHandler{
+			HandleNotification: func(channel, payload string) {
+				// processNotificationExample() 사용자가 용도 맞게 non-block or block 설계가 필요.
+				fmt.Printf("Received notification: Channel=%s, Payload=%s\n", channel, payload)
+				check <- true
+			},
+			HandleError: func(channel string, err error) {
+				log.Printf("Error on channel %s: %v\n", channel, err)
+			},
+		}
+
+		err = lm.Listen(channelName, handler)
+		if err != nil {
+
+			return err
+		}
+		return nil
+	}
+
+	err = expClient()
+	if err != nil {
+		log.Fatalf("Failed to make client: %v", err)
+	}
+	wg.Wait()
+
+	// 테스트용 NOTIFY 전송
+	err = lm.Notify("example_channel", "Hello, pglm!")
+	if err != nil {
+		log.Fatalf("Failed to send notification: %v", err)
+	}
+
+	select {
+	case <-check:
+	case <-time.After(3 * time.Second):
+		log.Fatalln("Failed to check the handler operation")
+	}
+
+	// Unlisten 및 Shutdown
+	err = lm.Unlisten("example_channel")
+	if err != nil {
+		log.Fatalf("Failed to unlisten: %v", err)
+	}
+	fmt.Println("Unlistened successfully.")
+
+	err = lm.Shutdown()
+	if err != nil {
+		log.Fatalf("Failed to shutdown: %v", err)
+	}
+	fmt.Println("Shutdown successfully.")
 }
